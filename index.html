@@ -1,103 +1,263 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-<title>Dailymotion Multiplier</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Dailymotion Multiplier Pro</title>
 
 <style>
+
 body{
-font-family: Arial, sans-serif;
-background:#111;
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#141E30,#243B55);
 color:white;
 text-align:center;
-margin:0;
-padding:0;
 }
 
 header{
+font-size:30px;
 padding:20px;
-font-size:28px;
 font-weight:bold;
 }
 
-textarea{
-width:85%;
-height:120px;
-margin:20px;
+.container{
+max-width:900px;
+margin:auto;
 padding:10px;
-font-size:14px;
+}
+
+textarea{
+width:100%;
+height:120px;
+border-radius:10px;
+border:none;
+padding:15px;
+font-size:15px;
 }
 
 button{
-padding:12px 25px;
-font-size:16px;
-cursor:pointer;
+margin:8px;
+padding:12px 20px;
 border:none;
-border-radius:6px;
+border-radius:25px;
+cursor:pointer;
+font-size:14px;
+background:#ff416c;
+color:white;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+.controls{
+margin-top:10px;
 }
 
 #grid{
 display:grid;
-grid-template-columns: repeat(auto-fit, minmax(320px,1fr));
-gap:12px;
-padding:20px;
+grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+gap:20px;
+padding:30px;
+}
+
+.videoCard{
+background:#111;
+border-radius:12px;
+overflow:hidden;
+box-shadow:0 10px 25px rgba(0,0,0,0.5);
+position:relative;
 }
 
 iframe{
 width:100%;
-height:240px;
+height:220px;
 border:none;
-border-radius:6px;
 }
+
+.remove{
+position:absolute;
+top:5px;
+right:5px;
+background:red;
+border:none;
+color:white;
+padding:5px 8px;
+border-radius:50%;
+cursor:pointer;
+}
+
+footer{
+padding:20px;
+opacity:0.7;
+}
+
 </style>
+
 </head>
 
 <body>
 
-<header>Dailymotion Multiplier</header>
+<header>Dailymotion Multiplier Pro</header>
 
-<p>Paste multiple Dailymotion video links (one per line)</p>
+<div class="container">
 
-<textarea id="links" placeholder="https://www.dailymotion.com/video/xxxxx"></textarea><br>
+<p>Paste multiple Dailymotion links (one per line)</p>
+
+<textarea id="links"></textarea>
+
+<div class="controls">
 
 <button onclick="loadVideos()">Load Videos</button>
 
+<button onclick="playAll()">Play All</button>
+
+<button onclick="pauseAll()">Pause All</button>
+
+<button onclick="shareSetup()">Share Setup</button>
+
+</div>
+
+<br>
+
+<label>Master Volume</label>
+
+<br>
+
+<input type="range" min="0" max="1" step="0.1" value="1" onchange="setVolume(this.value)">
+
+</div>
+
 <div id="grid"></div>
+
+<footer>
+Multi-video viewer for Dailymotion
+</footer>
 
 <script>
 
+let players=[];
+
 function getVideoId(url){
-let match = url.match(/video\/([a-zA-Z0-9]+)/);
-if(match){
-return match[1];
-}
+
+let match=url.match(/video\/([a-zA-Z0-9]+)/);
+
+if(match){return match[1];}
+
 return null;
+
 }
 
 function loadVideos(){
 
-let input = document.getElementById("links").value;
-let urls = input.split("\n");
-let grid = document.getElementById("grid");
+players=[];
 
-grid.innerHTML = "";
+let input=document.getElementById("links").value;
 
-urls.forEach(url => {
+let urls=input.split("\n");
 
-let id = getVideoId(url.trim());
+let grid=document.getElementById("grid");
+
+grid.innerHTML="";
+
+urls.forEach(url=>{
+
+let id=getVideoId(url.trim());
 
 if(id){
 
-let iframe = document.createElement("iframe");
+let card=document.createElement("div");
 
-iframe.src = "https://www.dailymotion.com/embed/video/" + id + "?autoplay=1&mute=1";
+card.className="videoCard";
 
-grid.appendChild(iframe);
+let remove=document.createElement("button");
+
+remove.className="remove";
+
+remove.innerText="×";
+
+remove.onclick=function(){
+
+card.remove();
+
+}
+
+let iframe=document.createElement("iframe");
+
+iframe.src="https://www.dailymotion.com/embed/video/"+id+"?autoplay=1&mute=0";
+
+card.appendChild(remove);
+
+card.appendChild(iframe);
+
+grid.appendChild(card);
+
+players.push(iframe);
 
 }
 
 });
+
+}
+
+function playAll(){
+
+players.forEach(p=>{
+
+p.contentWindow.postMessage('{"command":"play"}',"*");
+
+});
+
+}
+
+function pauseAll(){
+
+players.forEach(p=>{
+
+p.contentWindow.postMessage('{"command":"pause"}',"*");
+
+});
+
+}
+
+function setVolume(v){
+
+players.forEach(p=>{
+
+p.contentWindow.postMessage('{"command":"setVolume","volume":'+v+'}',"*");
+
+});
+
+}
+
+function shareSetup(){
+
+let text=document.getElementById("links").value;
+
+let encoded=encodeURIComponent(text);
+
+let url=location.origin+location.pathname+"?videos="+encoded;
+
+prompt("Copy this link",url);
+
+}
+
+window.onload=function(){
+
+let params=new URLSearchParams(window.location.search);
+
+if(params.get("videos")){
+
+let vids=decodeURIComponent(params.get("videos"));
+
+document.getElementById("links").value=vids;
+
+loadVideos();
+
+}
 
 }
 
